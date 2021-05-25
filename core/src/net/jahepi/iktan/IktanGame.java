@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.math.collision.Ray;
@@ -25,18 +26,18 @@ public class IktanGame extends InputAdapter implements ApplicationListener {
 	public ModelBatch modelBatch;
 	public AssetManager assets;
 	public Environment environment;
-	public boolean loading = true;
 	private CameraHelper camera;
 	private ModelEntity model;
 	private ParticleWrapper particleWrapper;
 	private Sound sound;
 	private ModelEntityPool pool = new ModelEntityPool(6);
+	private ModelInstance skyBox;
 
 	@Override
 	public void create() {
 		modelBatch = new ModelBatch();
 		environment = new Environment();
-		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.9f, 0.9f, 0.9f, 1f));
 		environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
 
 		cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -44,35 +45,32 @@ public class IktanGame extends InputAdapter implements ApplicationListener {
 		cam.lookAt(0, 0, 0);
 		cam.near = 1f;
 		cam.far = 300f;
-		// cam.position.z = 5;
 		cam.update();
 		camera = new CameraHelper(cam);
 
 		assets = new AssetManager();
 		assets.load("ship.obj", Model.class);
+		assets.load("spacesphere.obj", Model.class);
 		particleWrapper = new ParticleWrapper(cam);
 		Gdx.input.setInputProcessor(this);
 		sound = Gdx.audio.newSound(Gdx.files.internal("magic.ogg"));
+		assets.finishLoading();
+		
+		doneLoading();
 	}
 
 	private void doneLoading() {
-		//model = new ModelEntity(assets.get("ship.obj", Model.class));
-		//models.add(model);
 		if (!pool.isFull()) {
 			pool.add(new ModelEntity(assets.get("ship.obj", Model.class)));
 		}
 		model = pool.get();
-		loading = false;
+		skyBox = new ModelInstance(assets.get("spacesphere.obj", Model.class));
 	}
 
 	@Override
 	public void render() {
 
 		float dt = Gdx.graphics.getDeltaTime();
-
-		if (loading && assets.update()) {
-			doneLoading();
-		}
 
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -88,6 +86,7 @@ public class IktanGame extends InputAdapter implements ApplicationListener {
 		for (ModelEntity model : pool.queue) {
 			modelBatch.render(model.modelInstance, environment);
 		}
+		modelBatch.render(skyBox, environment);
 		particleWrapper.render(modelBatch);
 		modelBatch.end();
 	}
